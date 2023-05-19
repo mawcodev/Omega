@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
-import youtube_dl
+import yt_dlp as youtube_dl
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -15,11 +15,11 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 #bot = discord.Client(intents=intents)
-bot = commands.Bot(command_prefix = 'csw!')
+bot = commands.Bot(command_prefix = '!',intents=intents)
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity = discord.Game(name = 'Ingresa csw!video y mira la magia!'))
+    await bot.change_presence(activity = discord.Game(name = 'Ingresa !video y mira la magia!'))
     print('Estoy Vivoooo')
 
 @bot.command()
@@ -61,7 +61,7 @@ async def play(ctx, url:str):
         'format':'bestaudio/best',
         'postprocessor': [{
             'key':'FFmpegExtractAudio',
-            'proferredcodec':'mp3',
+            'proferredcodec':'.webm',
             'proferredquality':'192',
         }],
     }
@@ -71,14 +71,18 @@ async def play(ctx, url:str):
         ydl.download([url])
 
     for file in os.listdir("./"):
-        if file.endswitch(".mp3"):
-            name = file
+        nombre, extension = os.path.splitext(file)
+        print(extension)
+        if extension ==".webm":
+            name = nombre
             print(f"Renombrando Archivo: {file}")
-            os.rename(file,"cancion.mp3")
+            os.rename(file,"cancion.webm")
+            print(file)
 
-    voz.play(discord.FFmpegPCMAudio(),after=lambda e: print("ha terminado"))
+    source = discord.FFmpegPCMAudio(file)
+    voz.play(source, after=lambda e: print("ha terminado"))
     voz.source = discord.PCMVolumeTransformer(voz.source)
-    voz.source.volume = 0.06
+    voz.source.volume = 0.2
 
     nombre = name.rsplit("-",2)
     await ctx.send(f"Reproduciendo: {nombre[0]}")
