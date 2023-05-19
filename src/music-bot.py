@@ -12,8 +12,6 @@ import asyncio
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-print(TOKEN)
-
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -70,12 +68,42 @@ async def play(ctx, url):
         while voz.is_playing():
             await asyncio.sleep(1)
 
-        await voz.disconnect()
-        await ctx.send('Reproducción finalizada, desconectado del canal de voz')
+        #await voz.disconnect()
+        await ctx.send('Reproducción finalizada - Next, baby!')
 
     except Exception as e:
         await ctx.send(f'Error al reproducir música: {str(e)}')
 
+@bot.command(pass_context = True)
+async def pause(ctx):
+    voz = ctx.guild.voice_client
+    if not voz:
+        await ctx.send('No estoy conectado a un canal de voz')
+        return
 
+    if voz.is_playing():
+        voz.pause()
+    else:
+        await ctx.send('En este momento no está sonando ninguna canción...')
 
-bot.run('******')
+@bot.command(pass_context = True)
+async def resume(ctx):
+    voz = ctx.guild.voice_client
+    if not voz:
+        await ctx.send('No estoy conectado a un canal de voz')
+        return
+
+    if voz.is_paused():
+        voz.resume()
+    else:
+        await ctx.send('En este momento no hay ninguna canción pausada...')
+
+@bot.command(pass_context = True)
+async def stop(ctx):
+    voz = ctx.guild.voice_client
+    if not voz:
+        await ctx.send('No estoy conectado a un canal de voz')
+        return
+    voz.stop()
+
+bot.run(TOKEN)
