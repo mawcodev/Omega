@@ -12,7 +12,13 @@ import asyncio
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-print(TOKEN)
+queues = {}
+
+def check_queue(ctx, id):
+    if queues[id] != []:
+        voz = ctx.guild.voice_client
+        source = queues[id].pop(0)
+        player = voz.play(source)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -58,24 +64,42 @@ async def play(ctx, url):
         video = YouTube(url)
         best_audio = video.streams.get_audio_only()
 
-        audio_source = discord.FFmpegPCMAudio(
+        source = discord.FFmpegPCMAudio(
             best_audio.url,
             before_options="-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2"
         )
 
-        voz.play(audio_source)
+        voz.play(source, after=lambda x=None: check_queue(ctx, ctx.message.guild.id))
         voz.source = discord.PCMVolumeTransformer(voz.source, volume=0.06)
         await ctx.send('Reproduciendo música de YouTube')
 
         while voz.is_playing():
-            await asyncio.sleep(1)
+            await asyncio.sleep(60)
 
-        await voz.disconnect()
-        await ctx.send('Reproducción finalizada, desconectado del canal de voz')
+        #await voz.disconnect()
+        await ctx.send('Next song!')
 
     except Exception as e:
         await ctx.send(f'Error al reproducir música: {str(e)}')
 
+@bot.command(pass_context = True)
+async def queue(ctx,url):
+    voz = ctx.guild.voice_client
+    if not voz:
+        await ctx.send('No estoy conectado a un canal de voz')
+        return
 
+    guild_id = ctx.message.guild.id
+    video = YouTube(url)
+    best_audio = video.streams.get_audio_only()
 
+    source = discord.FFmpegPCMAudio(
+        best_audio.url,
+        before_options="-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2"
+    )
+    if guild_id in queues:
+        queues[guild_id].append(source)
+    else:
+        queues[guild_id] = [source]
+    await ctx.send("Añadida a la cola")
 bot.run(TOKEN)
