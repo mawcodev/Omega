@@ -3,8 +3,11 @@ import os
 import discord
 from discord.ext import commands
 from discord.utils import get
+from pytube import YouTube
 from dotenv import load_dotenv
 import yt_dlp as youtube_dl
+import asyncio
+#import youtube_dl
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -19,7 +22,7 @@ bot = commands.Bot(command_prefix = '!',intents=intents)
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity = discord.Game(name = 'Ingresa !video y mira la magia!'))
+    await bot.change_presence(activity = discord.Game(name = 'Ingresa !command url-youtube-corta y mira la magia!'))
     print('Estoy Vivoooo')
 
 @bot.command()
@@ -45,46 +48,34 @@ async def desconectar(ctx):
     await voz.disconnect()
 
 @bot.command(pass_context = True)
-async def play(ctx, url:str):
-    cancionactiva = os.path.isfile("cancion.mp3")
-    try:
-        if cancionactiva:
-            os.remove("cancion.mp3")
-            print("La cancion se ha removido")
-    except PermissionError:
-        print("Reproduciendo canción")
-        await ctx.send("Error: Cancion reproduciendose")
+async def play(ctx, url):
+    voz = ctx.guild.voice_client
+    if not voz:
+        await ctx.send('No estoy conectado a un canal de voz')
         return
-    await ctx.send("Todo listo")
-    voz = get(bot.voice_clients,guild=ctx.guild)
-    ydl_op = {
-        'format':'bestaudio/best',
-        'postprocessor': [{
-            'key':'FFmpegExtractAudio',
-            'proferredcodec':'.webm',
-            'proferredquality':'192',
-        }],
-    }
 
-    with youtube_dl.YoutubeDL(ydl_op) as ydl:
-        print("Descargar Cancion")
-        ydl.download([url])
+    try:
+        video = YouTube(url)
+        best_audio = video.streams.get_audio_only()
 
-    for file in os.listdir("./"):
-        nombre, extension = os.path.splitext(file)
-        print(extension)
-        if extension ==".webm":
-            name = nombre
-            print(f"Renombrando Archivo: {file}")
-            os.rename(file,"cancion.webm")
-            print(file)
+        audio_source = discord.FFmpegPCMAudio(
+            best_audio.url,
+            before_options="-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2"
+        )
 
-    source = discord.FFmpegPCMAudio(file)
-    voz.play(source, after=lambda e: print("ha terminado"))
-    voz.source = discord.PCMVolumeTransformer(voz.source)
-    voz.source.volume = 0.2
+        voz.play(audio_source)
+        voz.source = discord.PCMVolumeTransformer(voz.source, volume=0.06)
+        await ctx.send('Reproduciendo música de YouTube')
 
-    nombre = name.rsplit("-",2)
-    await ctx.send(f"Reproduciendo: {nombre[0]}")
+        while voz.is_playing():
+            await asyncio.sleep(1)
 
-bot.run('MTEwMzcwMTk4NDQ3OTAyMzE0NQ.GyBi2N.xBCKvYb7q9SiOrVMf65AeCXCv03Xw1YRUJe_0Y')
+        await voz.disconnect()
+        await ctx.send('Reproducción finalizada, desconectado del canal de voz')
+
+    except Exception as e:
+        await ctx.send(f'Error al reproducir música: {str(e)}')
+
+
+
+bot.run('******')
